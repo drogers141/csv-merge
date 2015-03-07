@@ -1,0 +1,44 @@
+The base files here: 
+allstar.csv
+batting.csv
+salaries.csv
+are taken from http://seanlahman.com/baseball-archive/statistics/
+and have been sampled for 9 players that appear in all the csv files.
+They were then shuffled to have indices out of order in some cases,
+and/or the playerID column moved so it wasn't in the first position
+
+
+The *-partial files have had rows removed
+
+the *-out files here are the result of running reorder-sort-file with the 
+appropriate shared key index
+
+;; repl
+=> (reorder-sort-file "resources/allstar.csv" 3 "resources/allstar-out.csv")
+nil
+=> (reorder-sort-file "resources/batting.csv" 0 "resources/batting-out.csv")
+nil
+=> (reorder-sort-file "resources/salaries.csv" 3 "resources/salaries-out.csv")
+nil
+
+=> (reorder-sort-file "resources/allstar-partial.csv" 3
+                      "resources/allstar-partial-out.csv")
+nil
+=> (reorder-sort-file "resources/batting-partial.csv" 0
+                      "resources/batting-partial-out.csv")
+nil
+=> (reorder-sort-file "resources/salaries-partial.csv" 3
+                      "resources/salaries-partial-out.csv")
+nil
+
+;; The output csv from input with all the partial files is partial-output.csv
+=> (def partial-infiles
+     ["resources/allstar-partial-out.csv" 
+      "resources/batting-partial-out.csv" 
+      "resources/salaries-partial-out.csv"])
+#'csv-merge.core/partial-infiles
+=> (merge-to-outfile partial-infiles "resources/partial-output.csv")
+nil
+
+;; similarly - output.csv is the output from all of the original files merged
+

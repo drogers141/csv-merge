@@ -1,0 +1,6 @@
+playerID,yearID,stint,teamID,lgID,G,AB,R,H,2B,3B,HR,RBI,SB,CS,BB,SO,IBB,HBP,SH,SF,GIDP
+rodrifr03,2014,1,MIL,NL,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+rossty01,2014,1,SDN,NL,32,56,6,10,1,0,0,3,0,0,3,22,0,1,2,1,0
+streehu01,2014,1,SDN,NL,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+wainwad01,2014,1,SLN,NL,32,72,4,13,3,0,0,6,0,0,3,22,0,0,7,0,0
+watsoto01,2014,1,PIT,NL,78,3,0,1,0,0,0,0,0,0,0,2,0,0,0,0,0

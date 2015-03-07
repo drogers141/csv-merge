@@ -1,0 +1,9 @@
+playerID,gameID,yearID,gameNum,teamID,lgID,GP,startingPos,yearID,stint,teamID,lgID,G,AB,R,H,2B,3B,HR,RBI,SB,CS,BB,SO,IBB,HBP,SH,SF,GIDP,yearID,teamID,lgID,salary
+ramirar01,,,,,,,,,,,,,,,,,,,,,,,,,,,,,2014,MIL,NL,16000000
+rizzoan01,ALS201407150,2014,0,CHN,NL,1,,,,,,,,,,,,,,,,,,,,,,,,,,
+rodrifr03,,,,,,,,2014,1,MIL,NL,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,,
+rossty01,ALS201407150,2014,0,SDN,NL,0,,2014,1,SDN,NL,32,56,6,10,1,0,0,3,0,0,3,22,0,1,2,1,0,,,,
+streehu01,ALS201407150,2014,0,SDN,NL,0,,2014,1,SDN,NL,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2014,SDN,NL,7000000
+wainwad01,ALS201407150,2014,0,SLN,NL,1,,2014,1,SLN,NL,32,72,4,13,3,0,0,6,0,0,3,22,0,0,7,0,0,2014,SLN,NL,19500000
+watsoto01,,,,,,,,2014,1,PIT,NL,78,3,0,1,0,0,0,0,0,0,0,2,0,0,0,0,0,2014,PIT,NL,518500
+zimmejo02,ALS201407150,2014,0,WAS,NL,0, ,,,,,,,,,,,,,,,,,,,,,,2014,WAS,NL,7500000
