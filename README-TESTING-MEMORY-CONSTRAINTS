@@ -1,0 +1,207 @@
+The main constraint with this effort is that the merging into the output must be
+free to work without being able to fit the fully merged output in memory at the
+same time.
+
+I finished the original program a bit hurriedly as I thought I was taking perhaps
+too much time with it.  Though it worked fine, and I new the input to the final
+merge was lazy, I noted with chagrin that the output was held in memory then output
+all at once.  This was easy to fix, but I wanted to construct a test that proved
+the program would work without being able to hold the final output in memory.
+
+To guarantee this works correctly, I constructed 3 large files from the baseball
+data files I was using by merging the playerID (shared key) with the yearID in
+these files, as the playerID could be repeated at most once per year.  I then got
+rid of any other dups in the new shared key.  These files I called <name>.uniq.csv
+in the following.  I constructed a test function that reads all input csvs into
+memory and prints out their row count.  I then worked on constraining the memory
+to the jvm to ensure the largest file could be processed alone, but not all..
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ ls
+Appearances.uniq.csv Batting.uniq.csv Fielding.uniq.csv csv-merge.jar small-files
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ du -h *.csv
+5.7M Appearances.uniq.csv
+5.9M Batting.uniq.csv
+4.7M Fielding.uniq.csv
+
+# line counts
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ wc -l *.uniq.csv
+   92555 Appearances.uniq.csv
+   92551 Batting.uniq.csv
+   91574 Fielding.uniq.csv
+  276680 total
+
+# the headers and first row of data in the input files
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ head -n 2 *.uniq.csv
+==> Appearances.uniq.csv <==
+yearID,teamID,lgID,playerID,G_all,GS,G_batting,G_defense,G_p,G_c,G_1b,G_2b,G_3b,G_ss,G_lf,G_cf,G_rf,G_of,G_dh,G_ph,G_pr
+1871,BS1,NA,barnero01_1871,31,,31,31,0,0,0,16,0,15,0,0,0,0,,,
+
+==> Batting.uniq.csv <==
+playerID,yearID,stint,teamID,lgID,G,AB,R,H,2B,3B,HR,RBI,SB,CS,BB,SO,IBB,HBP,SH,SF,GIDP
+abercda01_1871,1871,1,TRO,NA,1,4,0,0,0,0,0,0,0,0,0,0,,,,,
+
+==> Fielding.uniq.csv <==
+playerID,yearID,stint,teamID,lgID,POS,G,GS,InnOuts,PO,A,E,DP,PB,WP,SB,CS,ZR
+abercda01_1871,1871,1,TRO,NA,SS,1,,,1,3,2,0,,,,,
+
+
+# through trial and error 170MB seemed to be a good cutoff
+# the -t option calls the function to read in whatever files into memory that are passed
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms170m -Xmx170m -jar csv-merge.jar -t Batting.uniq.csv
+arguments: [Batting.uniq.csv]
+line counts: [92551]
+nil
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms170m -Xmx170m -jar csv-merge.jar -t Appearances.uniq.csv
+arguments: [Appearances.uniq.csv]
+line counts: [92555]
+nil
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms170m -Xmx170m -jar csv-merge.jar -t Fielding.uniq.csv
+arguments: [Fielding.uniq.csv]
+line counts: [91574]
+nil
+
+# so here, even trying to read the two smallest into memory and process them fails
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms170m -Xmx170m -jar csv-merge.jar -t Fielding.uniq.csv Appearances.uniq.csv
+arguments: [Fielding.uniq.csv Appearances.uniq.csv]
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+at java.lang.AbstractStringBuilder.<init>(AbstractStringBuilder.java:64)
+at java.lang.StringBuilder.<init>(StringBuilder.java:85)
+at clojure.data.csv$read_record.invoke(csv.clj:59)
+at clojure.data.csv$fn__55$fn__56.invoke(csv.clj:77)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.Cons.next(Cons.java:39)
+at clojure.lang.PersistentVector.create(PersistentVector.java:51)
+at clojure.lang.LazilyPersistentVector.create(LazilyPersistentVector.java:31)
+at clojure.core$vec.invoke(core.clj:354)
+at csv_merge.core$read_csv.invoke(core.clj:62)
+at clojure.core$map$fn__4245.invoke(core.clj:2557)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.RT.seq(RT.java:484)
+at clojure.core$seq.invoke(core.clj:133)
+at clojure.core$map$fn__4245.invoke(core.clj:2551)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.RT.seq(RT.java:484)
+at clojure.lang.LazilyPersistentVector.create(LazilyPersistentVector.java:31)
+at clojure.core$vec.invoke(core.clj:354)
+at csv_merge.core$read_all_into_memory.invoke(core.clj:190)
+at csv_merge.core$_main.doInvoke(core.clj:237)
+at clojure.lang.RestFn.applyTo(RestFn.java:137)
+at csv_merge.core.main(Unknown Source)
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+
+
+# had to bump up the memory to 200MB to run the original program with 2 input files
+# this shows that, though I lazily feed the final merge, I still hold the result in memory - so here the temporary files
+# are written - ie the reorder and sort works on the individual files, but the final merge runs out of memory
+
+$ java -Xms200m -Xmx200m -jar csv-merge.jar Fielding.uniq.csv 0 Appearances.uniq.csv 3
+creating sorted and reordered files ..
+creating output file: output.csv
+Exception in thread "main" java.lang.OutOfMemoryError: GC overhead limit exceeded
+at clojure.lang.PersistentVector$ChunkedSeq.next(PersistentVector.java:335)
+at clojure.lang.PersistentVector.create(PersistentVector.java:51)
+at clojure.lang.LazilyPersistentVector.create(LazilyPersistentVector.java:31)
+at clojure.core$vec.invoke(core.clj:354)
+at csv_merge.core$output_row.invoke(core.clj:106)
+at csv_merge.core$merge_to_outfile.invoke(core.clj:177)
+at csv_merge.core$_main.doInvoke(core.clj:254)
+at clojure.lang.RestFn.applyTo(RestFn.java:137)
+at csv_merge.core.main(Unknown Source)
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ ls
+Appearances.uniq-tmp.csv Batting.uniq.csv Fielding.uniq.csv small-files
+Appearances.uniq.csv Fielding.uniq-tmp.csv csv-merge.jar
+
+# I then checked if 200MB still fails with just reading in the 2 smallest files - which it does, so we can be clear
+# that overhead in the main program is not a problem
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms200m -Xmx200m -jar csv-merge.jar -t Fielding.uniq.csv Appearances.uniq.csv
+arguments: [Fielding.uniq.csv Appearances.uniq.csv]
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+at java.lang.StringBuilder.toString(StringBuilder.java:405)
+at clojure.core$str.invoke(core.clj:520)
+at clojure.data.csv$read_record.invoke(csv.clj:64)
+at clojure.data.csv$fn__55$fn__56.invoke(csv.clj:77)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.Cons.next(Cons.java:39)
+at clojure.lang.PersistentVector.create(PersistentVector.java:51)
+at clojure.lang.LazilyPersistentVector.create(LazilyPersistentVector.java:31)
+at clojure.core$vec.invoke(core.clj:354)
+at csv_merge.core$read_csv.invoke(core.clj:62)
+at clojure.core$map$fn__4245.invoke(core.clj:2557)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.RT.seq(RT.java:484)
+at clojure.core$seq.invoke(core.clj:133)
+at clojure.core$map$fn__4245.invoke(core.clj:2551)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.RT.seq(RT.java:484)
+at clojure.lang.LazilyPersistentVector.create(LazilyPersistentVector.java:31)
+at clojure.core$vec.invoke(core.clj:354)
+at csv_merge.core$read_all_into_memory.invoke(core.clj:190)
+at csv_merge.core$_main.doInvoke(core.clj:237)
+at clojure.lang.RestFn.applyTo(RestFn.java:137)
+at csv_merge.core.main(Unknown Source)
+
+# finally, I made sure that 200MB worked on the original program with all 3 input files, ie - the 3 temp files are written
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -Xms200m -Xmx200m -jar csv-merge.jar Fielding.uniq.csv 0 Appearances.uniq.csv 3 Batting.uniq.csv 0
+creating sorted and reordered files ..
+creating output file: output.csv
+Exception in thread "main" java.lang.OutOfMemoryError: GC overhead limit exceeded
+at clojure.core$concat.invoke(core.clj:677)
+at clojure.core$concat$fn__3955.invoke(core.clj:689)
+at clojure.lang.LazySeq.sval(LazySeq.java:40)
+at clojure.lang.LazySeq.seq(LazySeq.java:49)
+at clojure.lang.Cons.next(Cons.java:39)
+at clojure.lang.RT.countFrom(RT.java:540)
+at clojure.lang.RT.count(RT.java:530)
+at csv_merge.core$output_row.invoke(core.clj:104)
+at csv_merge.core$merge_to_outfile.invoke(core.clj:177)
+at csv_merge.core$_main.doInvoke(core.clj:254)
+at clojure.lang.RestFn.applyTo(RestFn.java:137)
+at csv_merge.core.main(Unknown Source)
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ ls
+Appearances.uniq-tmp.csv Batting.uniq-tmp.csv Fielding.uniq-tmp.csv csv-merge.jar
+Appearances.uniq.csv Batting.uniq.csv Fielding.uniq.csv small-files
+
+
+# After fix - showing that running with unlimited and limited memory produce same output
+
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -jar csv-merge.jar -o big-uniq-out1.csv Appearances.uniq.csv 3 Batting.uniq.csv 0 Fielding.uniq.csv
+creating sorted and reordered files ..
+creating output file: big-uniq-out1.csv
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ java -jar -Xms200m -Xmx200m csv-merge.jar -o big-uniq-out2.csv Appearances.uniq.csv 3 Batting.uniq.csv 0 Fielding.uniq.csv
+creating sorted and reordered files ..
+creating output file: big-uniq-out2.csv
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$ diff big-uniq-out1.csv big-uniq-out2.csv
+drogers@drogers-mbp:~/Desktop/csv-downloads/baseball-big/big-file-small-memory-test
+$
+
+# Note - performance is bad, but this is not a concern for this project as the memory constraint is the main issue
+# to increase performance
+# easily - could chunk output in memory and write chunks
+#           - parallelize reorder and sorting to intermediate files
+# slightly harder - chunk input with a queue for each file
+# harder - parallelize merge somehow
