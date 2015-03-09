@@ -24,12 +24,21 @@ It is assumed that a single input file cat fit entirely in memory
 but not the final product which is built lazily from sorted and ordered
 intermediate csv files taken from each input file.
 
-Program args - file paths and 0-based indices of the shared key's 
+To see the proof that the program respects these memory constraints, see
+the file README-TESTING-MEMORY-CONSTRAINTS in this directory.
+
+To create an executable jar run:
+lein uberjar
+
+from this directory.  (Assumes you have Leiningen installed.)
+The *-standalone.jar file can be used as in the examples below.
+
+Program args - file paths and 0-based indices of the shared key's
    location in each file.
    Run with no args to see usage.
 
-This is the root of leiningen project directory.  From here, the source
-is in 
+This is the root of Leiningen project directory.  From here, the source
+is in
 src/
 tests are in
 test
@@ -129,7 +138,7 @@ streehu01,,,,,,,,2014,1,SDN,NL,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,,
 
 ## License
 
-Copyright © 2015 
+Copyright © 2015
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

@@ -22,22 +22,6 @@
             [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
-;; :files -> vector with paths of intermediate csv files to be merged
-;;            together for final output
-;; :output-header -> vector with column names of output csv
-;;                    in order
-;; :fname-to-out-index -> map with file name to index of its first
-;;     column in the output header
-;;     this does not count the shared key - which is the first column
-;;     of the output
-(def state (atom {}))
-
-(defn get-state [key]
-  (get @state key))
-
-(defn put-state [key val]
-  (swap! state assoc key val))
-
 (defn reorder [row sk-index]
   "Takes vector created from row of data and index of shared-key
    and returns row reordered with shared key at index 0"
