@@ -12,7 +12,7 @@
    has unique values within a single csv input file.
    The input files may be large - e.g. up to 2 million lines long and
    255 columns wide.
-   Program args - file paths and 0-based indices of the shared key's 
+   Program args - file paths and 0-based indices of the shared key's
        location in each file.
    Run with no args to see usage.
    "
@@ -26,7 +26,7 @@
 ;;            together for final output
 ;; :output-header -> vector with column names of output csv
 ;;                    in order
-;; :fname-to-out-index -> map with file name to index of its first 
+;; :fname-to-out-index -> map with file name to index of its first
 ;;     column in the output header
 ;;     this does not count the shared key - which is the first column
 ;;     of the output
@@ -41,7 +41,7 @@
 (defn reorder [row sk-index]
   "Takes vector created from row of data and index of shared-key
    and returns row reordered with shared key at index 0"
-  (into [(row sk-index)] 
+  (into [(row sk-index)]
         (concat (subvec row 0 sk-index) (subvec row (inc sk-index)))))
 
 (defn reorder-sort [rows sk-index]
@@ -54,11 +54,11 @@
         body (subvec reordered 1)]
     (into [header]
           (sort-by first body))))
-        
+
 (defn read-csv [infile]
   "Returns 2d vector of complete csv file. (Not lazy)."
   (with-open [in (io/reader infile)]
-     (vec 
+     (vec
        (csv/read-csv in))))
 
 (defn write-csv [rows outfile]
@@ -75,7 +75,7 @@
 
 ;;** Assumes shared key values are unique within a single input file
 (defn mins [indices-to-rows]
-  "Returns map with indices and rows of one or more rows whose first 
+  "Returns map with indices and rows of one or more rows whose first
    element (the shared key) has the lowest value.
 
    indices-to-rows - map with integer keys and vector values
@@ -88,7 +88,7 @@
 ;;** Doesn't care if column names clash among different files
 (defn output-row [indices-to-rows headersz]
   "Merges one or more rows of data from intermediate files
-   to the output row, adding shared key, ordering and padding with 
+   to the output row, adding shared key, ordering and padding with
    nils as necessary.  See tests for examples.
    Returns vector of single output row.
 
@@ -116,18 +116,21 @@
     (-> (csv/read-csv in) first vec)))
 
 (defn output-header-and-indices [infiles]
-  "Returns map with :header - vector of final header of column names
-                    :indices - indices of 
+  "Returns map with
+       :header - vector of final header of column names
+       :indices - indices of starting column in the output header for
+           each infile in order received
+           Note that 0 is reserved for the shared key.
    infiles - vector (any seq) of intermediate files in order desired"
   (loop [header (read-header (first infiles))
          files (rest infiles)
          indices [1]]
     (if (seq files)
       (let [next-part (-> (first files) read-header rest)]
-        (recur (concat header next-part) 
-               (rest files) 
+        (recur (concat header next-part)
+               (rest files)
                (conj indices (count header))))
-      {:header (vec header) :indices indices}))) 
+      {:header (vec header) :indices indices})))
 
 (defn csv-seq [file]
   "Returns map with file reader in :rdr, lazy csv reader in :csv
@@ -151,7 +154,7 @@
         (first p)))))
 
 ;;** Assumes header with column names on all files
-(defn merge-to-outfile [infiles outfile]
+(defn merge-to-outfile-orig [infiles outfile]
  "Creates output csv file merged from intermediate csv files.
    infiles - vector of intermediate file paths
        order will determine output column order
@@ -180,11 +183,49 @@
                     (prune indices)))
            (write-csv output outfile)))))))
 
+;;** Assumes header with column names on all files
+(defn merge-to-outfile [infiles outwr]
+ "Creates output csv file merged from intermediate csv files.
+  Lazily reads from all infiles and outputs one line at a time to output.
+  infiles - vector of intermediate file paths
+      order will determine output column order
+  outwr - output writer to opened file"
+ (let [peek-next #(nth (% :csv) (% :row) nil)
+       {:keys [header indices]} (output-header-and-indices infiles)]
+   (csv/write-csv outwr [header])
+   (loop [csv-seqs (vec (map csv-seq infiles))
+          indices indices]
+     (when (seq csv-seqs)
+       (let [candidate-rows (vec (map peek-next csv-seqs))
+             candidates (zipmap indices candidate-rows)
+             viable (into {} (filter second candidates))
+             minrows (mins viable)]
+         (when (pos? (count minrows))
+           ;; create output row and write to outwr
+           ;; remove any csv-seqs and indices that return nil
+           ;; advance index of csv-seqs that we used
+           (let [new-row (output-row minrows (count header))
+                 prune #(into [] (map second (filter first (map vector candidate-rows %))))
+                 pruned-seqs (prune csv-seqs)
+                 indices-to-seqs (zipmap indices csv-seqs)]
+             (csv/write-csv outwr [new-row])
+             (recur (incr-seqs pruned-seqs indices-to-seqs minrows)
+                    (prune indices)))))))))
+
+(defn read-all-into-memory [infiles]
+  "For testing - read all the csv input files into memory together.
+   Returns line count of each file in order."
+  (let [inmem (map read-csv infiles)]
+    (vec (map count inmem))))
+
 (def cli-options
   [["-h" "--help" "Print this help"
-               :flag true]
-   ["-o" "--output-file OUTFILE" "Path to create output csv. 
-    If not provided defaults to output.csv."]])
+        :flag true]
+   ["-o" "--output-file OUTFILE" "Path to create output csv.
+    If not provided defaults to output.csv."]
+   ["-t" "--test" "Run test for memory characteristics.
+    Pass filenames to be read in as params to main"
+        :flag true]])
 
 (defn usage [options-summary]
   (->> ["Merge csv files that share a key - see module docs or readme."
@@ -198,7 +239,7 @@
         "infile index infile index [..]"
         "Pairs of input file paths followed by the zero-based index"
         "of the shared key column in that file."
-        "For example:" 
+        "For example:"
         "file1.csv 0 file2.csv 3 file3.csv 0"
         ""
         "Creates intermediate files from the input files that are sorted"
@@ -218,6 +259,10 @@
   (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
     (cond
       (:help options) (exit 0 (usage summary))
+      (:test options) (do (println "arguments: " arguments)
+                        (let [line-counts (read-all-into-memory arguments)]
+                          (println "line counts: " line-counts))
+                        (exit 0 "ok"))
       (zero? (count arguments)) (exit 1 (usage summary))
       errors (exit 1 (error-msg errors)))
     (let [outfile (or (options :output-file) "output.csv")
@@ -228,9 +273,9 @@
           reorder-sort-args (map vector infiles indices inter-files)]
       (do
         (println "creating sorted and reordered files ..")
-        (doall 
+        (doall
           (for [tuple reorder-sort-args]
             (apply reorder-sort-file tuple)))
         (println "creating output file: " outfile)
-        (merge-to-outfile infiles outfile)))))
-    
+        (with-open [outwr (io/writer outfile)]
+          (merge-to-outfile infiles outwr))))))
