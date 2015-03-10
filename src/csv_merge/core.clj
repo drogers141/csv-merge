@@ -262,4 +262,4 @@
             (apply reorder-sort-file tuple)))
         (println "creating output file: " outfile)
         (with-open [outwr (io/writer outfile)]
-          (merge-to-outfile infiles outwr))))))
+          (merge-to-outfile inter-files outwr))))))
